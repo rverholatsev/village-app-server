@@ -1,4 +1,5 @@
 <?php
+
 namespace restapi\models\validation\users;
 
 use restapi\models\Users;
@@ -53,11 +54,35 @@ class Edit extends Model
         }
     }
 
+    /**
+     * @return null|Users
+     */
     protected function getUser()
     {
         if ($this->_user === null) {
-            $this->_user = Users::findByEmail($this->email);
+            $this->_user = Yii::$app->user->identity;
         }
         return $this->_user;
+    }
+
+    public function edit()
+    {
+        $user = $this->getUser();
+        $prevEmail = $user->email;
+
+        $user->edit($this->name, $this->phone, $this->email, $this->company_name);
+
+        if($prevEmail !== $user->email){
+            Yii::$app->mail->compose()
+                ->setFrom(Yii::$app->params['adminEmail'])
+                ->setTo($this->email)
+                ->setSubject('Village app. Confirm email.')
+                ->setTextBody('To confirm email, follow the link: ' . Yii::$app->params['confirmEmailUrl'] . '?password_reset_token=' . $user->password_reset_token)
+                ->send();
+
+            $user->logout();
+        }
+
+        return new \stdClass();
     }
 }

@@ -11,6 +11,8 @@ class SetPassword extends Model
     public $password_reset_token;
     public $password;
 
+    private $_user;
+
     /**
      * @inheritdoc
      */
@@ -26,12 +28,27 @@ class SetPassword extends Model
 
     public function validateToken($attribute, $params)
     {
-        $user = Users::findByResetPasswordToken($this->password_reset_token);
-
-        if (empty($user)) {
-            $this->addError($attribute, 'Wrong email password reset token.');
-        } else if ($user->status !== Users::STATUS_PASSWORD_RESETED) {
-            $this->addError($attribute,'User with this token can\'t have any statuses except password reseted.');
+        if (!$this->hasErrors()) {
+            if (!$this->getUser()) {
+                $this->addError($attribute, 'Wrong password reset token.');
+            }
         }
+    }
+
+    public function getUser()
+    {
+        if (!$this->_user) {
+            $this->_user = Users::findByResetPasswordToken($this->password_reset_token);
+        }
+        return $this->_user;
+    }
+
+    public function setPassword()
+    {
+        $user = $this->getUser();
+
+        $user->setPassword($this->password);
+
+        return new \stdClass();
     }
 }

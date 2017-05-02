@@ -101,9 +101,14 @@ class Users extends \common\models\extended\Users implements \yii\web\IdentityIn
         return self::findOne(['email' => $email, 'status' => self::STATUS_ACTIVE]);
     }
 
+    public static function findByPhone($phone)
+    {
+        return self::findOne(['phone' => $phone]);
+    }
+
     public static function signUp($name, $phone, $company_name, $email, $password)
     {
-        $user = self::findByUnverifiedEmail($email);
+        $user = self::findByEmail($email);
 
         if (empty($user)) {
             $user = new self();
@@ -122,30 +127,27 @@ class Users extends \common\models\extended\Users implements \yii\web\IdentityIn
                 throw new ServerErrorHttpException('Can\'t create new user.');
             }
 
-            // does it make sense?
             $user->generateEmailVerifyToken();
 
-            // send link with email_verify_token to approve on email
-
-            return new \stdClass();
+            return $user;
         } else {
-            $user = self::findByEmail($email);
+            $user = self::findByUnverifiedEmail($email);
 
-            if (!empty($user) && $user->status == self::STATUS_EMAIL_UNVERIFIED) {
+            if (!empty($user)) {
 
-                //send link with email_verify_token to approve on email
+                $user->generateEmailVerifyToken();
 
-                Yii::$app->getResponse()->setStatusCode(201);
-                return new \stdClass();
+                return $user;
             } else {
                 throw new BadRequestHttpException('User with current email is already exist.');
             }
         }
-    } // TODO: email link
+    } // TODO: email link : done!
 
     public function confirmAndLogin()
     {
         $this->status = self::STATUS_ACTIVE;
+
         if (!$this->save()) {
             throw new ServerErrorHttpException('Can\'t update status of user.');
         }
@@ -155,8 +157,6 @@ class Users extends \common\models\extended\Users implements \yii\web\IdentityIn
         $this->generateBearerToken();
 
         Yii::$app->user->login($this);
-
-        return $this->userResponse();
     }
 
     public function login()
@@ -166,18 +166,11 @@ class Users extends \common\models\extended\Users implements \yii\web\IdentityIn
         $this->save();
 
         Yii::$app->user->login($this);
-
-        return $this->userResponse();
     }
 
     public function logout()
     {
-        $this->auth_key = null;
-        $this->bearer_token = null;
-
         Yii::$app->user->logout();
-
-        return new \stdClass();
     }
 
     public function resetPassword()
@@ -187,51 +180,33 @@ class Users extends \common\models\extended\Users implements \yii\web\IdentityIn
         $this->save();
 
         $this->generatePasswordResetToken();
+    } // TODO: email link : done!
 
-//        if($this->auth_key !== null){
-//            $this->auth_key = null;
-//        }
-//
-//        if($this->bearer_token !== null){
-//            $this->bearer_token = null;
-//        }
-
-        // send link with token to email
-
-        return new \stdClass();
-    } // TODO: email link
-
-    public function setPassword($password){
+    public function setPassword($password)
+    {
         $this->password_hash = Yii::$app->security->generatePasswordHash($password);
         $this->save();
 
         $this->password_reset_token = null;
-
-        return new \stdClass();
     }
 
-    public function edit($name, $phone, $email, $company_name){
+    public function edit($name, $phone, $email, $company_name)
+    {
         $this->name = $name;
         $this->phone = $phone;
         $this->company_name = $company_name;
 
-        if($this->email !== $email) {
+        if ($this->email !== $email) {
             $this->email = $email;
             $this->status = $this::STATUS_EMAIL_UNVERIFIED;
 
-            $this->auth_key = null;
-            $this->bearer_token = null;
             $this->generateEmailVerifyToken();
-
-            //send link with token to email
-
-
         }
 
-        $this->save();
-
-        return new \stdClass();
-    } // TODO: email link
+        if(!$this->save()){
+            throw new ServerErrorHttpException('Can\'t edit mail.');
+        }
+    } // TODO: email link : done!
 
     public function userResponse()
     {
@@ -249,7 +224,8 @@ class Users extends \common\models\extended\Users implements \yii\web\IdentityIn
         return $result;
     }
 
-    public static function searchCompanies($text){
+    public static function searchCompanies($text)
+    {
         return self::find()
             ->select('company_name')->distinct()
             ->where(['like', 'company_name', $text])

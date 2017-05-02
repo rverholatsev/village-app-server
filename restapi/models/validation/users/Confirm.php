@@ -12,6 +12,7 @@ use yii\base\Model;
 class Confirm extends Model
 {
     public $email_verify_token;
+    private $_user;
 
 
     /**
@@ -28,11 +29,30 @@ class Confirm extends Model
 
     public function validateToken($attribute, $params)
     {
-        $user = Users::findByEmailVerifyToken($this->email_verify_token);
+        $user = $this->getUser();
         if (empty($user)) {
             $this->addError($attribute, 'Wrong sign up token.');
         } else if ($user->status !== Users::STATUS_EMAIL_UNVERIFIED) {
             $this->addError($attribute, 'User with this token can\'t have any status expect "STATUS_EMAIL_UNVERIFIED".');
         }
+    }
+
+    /**
+     * @return Users|null
+     */
+    protected function getUser()
+    {
+        if ($this->_user === null) {
+            $this->_user = Users::findByEmailVerifyToken($this->email_verify_token);
+        }
+        return $this->_user;
+    }
+
+    public function confirm()
+    {
+        $user = $this->getUser();
+        $user->confirmAndLogin();
+
+        return $user->userResponse();
     }
 }

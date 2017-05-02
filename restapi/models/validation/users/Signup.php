@@ -1,4 +1,5 @@
 <?php
+
 namespace restapi\models\validation\users;
 
 use restapi\models\Users;
@@ -28,6 +29,7 @@ class Signup extends Model
             ['phone', 'integer', 'max' => 9999999999, 'min' => 1000000000, 'integerOnly' => true],
             ['email', 'email'],
             ['email', 'validateEmail'],
+            ['phone', 'validatePhone'],
         ];
     }
 
@@ -55,6 +57,16 @@ class Signup extends Model
         }
     }
 
+    public function validatePhone($attribute, $params)
+    {
+        if (!$this->hasErrors()) {
+            $user = Users::findByPhone($this->phone);
+            if ($user) {
+                $this->addError($attribute, 'Phone already exists.');
+            }
+        }
+    }
+
     /**
      * Finds user by [[phone]]
      *
@@ -67,4 +79,20 @@ class Signup extends Model
         }
         return $this->_user;
     }
+
+    public function signUp()
+    {
+        /** @var Users $user */
+        $user = Users::signUp($this->name, $this->phone, $this->company_name, $this->email, $this->password);
+
+        Yii::$app->mail->compose()
+            ->setFrom(Yii::$app->params['adminEmail'])
+            ->setTo($this->email)
+            ->setSubject('Village app. Verify email.')
+            ->setTextBody('To confirm the mail, follow the link: ' . Yii::$app->params['confirmEmailUrl'] . '?email_verify_token=' . $user->email_verify_token)
+            ->send();
+
+        return new \stdClass();
+    }
+
 }

@@ -20,7 +20,7 @@ class Users extends \common\models\Users
 {
     const STATUS_EMAIL_UNVERIFIED = 0;
     const STATUS_PASSWORD_RESETED = 1;
-    const STATUS_ACTIVE = 2;
+    const STATUS_ACTIVE = 10;
 
     const ROLE_USER = 0;
     const ROLE_ADMIN = 1;

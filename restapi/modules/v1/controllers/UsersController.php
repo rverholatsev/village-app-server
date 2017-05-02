@@ -40,7 +40,7 @@ class UsersController extends AppController
         return [
             'index' => ['get'],
             'signup' => ['post'],
-            'confirm' => ['get'],
+            'confirm' => ['post'],
             'login' => ['post'],
             'logout' => ['post'],
             'reset-password' => ['post'],
@@ -60,23 +60,23 @@ class UsersController extends AppController
     {
         $model = new Signup();
         $model->load(Yii::$app->request->post(), '');
-        if ($model->validate()) {
-            return Users::signUp($model->name, $model->phone, $model->company_name, $model->email, $model->password);
+        if (!$model->validate()) {
+            return $model;
         }
-        return $model;
+
+        return $model->signUp();
     }
 
     public function actionConfirm()
     {
         $model = new Confirm();
-        $model->load(Yii::$app->request->get(), '');
+        $model->load(Yii::$app->request->post(), '');
 
         if (!$model->validate()) {
             return $model;
         }
 
-        $user = Users::findByEmailVerifyToken($model->email_verify_token);
-        return $user->confirmAndLogin();
+        return $model->confirm();
     }
 
     public function actionLogin()
@@ -88,9 +88,7 @@ class UsersController extends AppController
             return $model;
         }
 
-        $user = Users::findByEmail($model->email);
-
-        return $user->login();
+        return $model->login();
     }
 
     public function actionLogout()
@@ -98,7 +96,10 @@ class UsersController extends AppController
         /** @var Users $user */
         $user = Yii::$app->user->identity;
 
-        return $user->logout();
+        $user->logout();
+
+        return new \stdClass();
+
     }
 
     public function actionResetPassword()
@@ -111,9 +112,7 @@ class UsersController extends AppController
             return $model;
         }
 
-        $user = Users::findByVerifiedEmail($model->email);
-
-        return $user->resetPassword();
+        return $model->resetPassword();
     }
 
     public function actionSetPassword()
@@ -126,9 +125,7 @@ class UsersController extends AppController
             return $model;
         }
 
-        $user = Users::findByResetPasswordToken($model->password_reset_token);
-
-        return $user->setPassword($model->password);
+        return $model->setPassword();
     } // TODO: fix error
 
     public function actionEdit()

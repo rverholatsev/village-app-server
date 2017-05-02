@@ -69,4 +69,13 @@ class Login extends Model
         }
         return $this->_user;
     }
+
+    public function login()
+    {
+        $user = $this->getUser();
+
+        $user->login();
+
+        return $user->userResponse();
+    }
 }
